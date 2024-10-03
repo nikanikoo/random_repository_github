@@ -7,7 +7,7 @@ Python site, which can be used to find a random repository from github.com that 
 git clone https://github.com/nikanikoo/random_repository_github.git
 cd random_repository_github
 pip install Flask requests
-python app.my
+python app.py
 ```
 
 ## Feedback
