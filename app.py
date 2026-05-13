@@ -3,6 +3,7 @@ import requests
 import random
 import os
 import time
+import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -17,56 +18,46 @@ GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET')
 
 # Configuration
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # System-wide token (optional)
-CACHE_TIMEOUT = 1800  # 30 minutes
-
-# Simple cache
-cache = {
-    'repositories': [],
-    'last_updated': 0
-}
 
 def get_repositories():
-    current_time = time.time()
-    
-    # If cache is valid, return it
-    if cache['repositories'] and (current_time - cache['last_updated'] < CACHE_TIMEOUT):
-        return cache['repositories']
-    
     try:
-        headers = {'User-Agent': 'RandomRepoApp/1.0'}
+        headers = {
+            'User-Agent': 'RandomRepoApp/1.0',
+            'Accept': 'application/vnd.github.v3+json'
+        }
         
         # Priority: 1. Logged-in user token, 2. System-wide GITHUB_TOKEN
         token = session.get('access_token') or GITHUB_TOKEN
         if token:
             headers['Authorization'] = f'token {token}'
             
-        random_since = random.randint(1, 100000000)
+        start_date = datetime.date(2008, 1, 1)
+        end_date = datetime.date.today()
+        time_between = end_date - start_date
+        random_days = random.randrange(time_between.days)
+        random_date = start_date + datetime.timedelta(days=random_days)
         
-        response = requests.get(
-            f'https://api.github.com/repositories?since={random_since}', 
-            headers=headers, 
-            timeout=10
-        )
+        random_page = random.randint(1, 5)
+        
+        sort_options = ['stars', 'forks', 'updated', '']
+        random_sort = random.choice(sort_options)
+        random_order = random.choice(['asc', 'desc'])
+        search_query = f'stars:>=0+created:{random_date}'
+        search_url = f'https://api.github.com/search/repositories?q={search_query}&per_page=100&page={random_page}'
+        
+        if random_sort:
+            search_url += f'&sort={random_sort}&order={random_order}'
+        
+        response = requests.get(search_url, headers=headers, timeout=15)
         
         if response.status_code == 200:
-            repos = response.json()
-            if repos:
-                cache['repositories'] = repos
-                cache['last_updated'] = current_time
-                return cache['repositories']
-        
-        if cache['repositories']:
-            return cache['repositories']
-            
-        response = requests.get('https://api.github.com/repositories', headers=headers, timeout=10)
-        if response.status_code == 200:
-            cache['repositories'] = response.json()
-            cache['last_updated'] = current_time
-            return cache['repositories']
+            data = response.json()
+            return data.get('items', [])
             
         return None
-    except Exception:
-        return cache['repositories'] if cache['repositories'] else None
+    except Exception as e:
+        print(f"Error fetching repositories: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -87,11 +78,26 @@ def index():
     repo_url = random_repo['html_url']
     repo_name = random_repo['full_name']
     repo_description = random_repo.get('description', 'No description available.')
+    stars = random_repo.get('stargazers_count', 0)
+    language = random_repo.get('language', 'Unknown')
+    
+    # Format dates for the UI
+    updated_at = random_repo.get('updated_at', '')
+    if updated_at:
+        updated_at = updated_at.split('T')[0]
+        
+    created_at = random_repo.get('created_at', '')
+    if created_at:
+        created_at = created_at.split('T')[0]
     
     return render_template('index.html', 
                          repo_url=repo_url, 
                          repo_name=repo_name, 
                          repo_description=repo_description,
+                         stars=stars,
+                         language=language,
+                         updated_at=updated_at,
+                         created_at=created_at,
                          user=user_info)
 
 @app.route('/login')

@@ -39,6 +39,32 @@
 
             <p class="repo-description">{{ repo_description }}</p>
 
+            <div class="repo-meta">
+                {% if language and language != 'Unknown' %}
+                <span class="meta-item">
+                    <i class="fas fa-circle" style="font-size: 10px; color: var(--color-accent-fg);"></i>
+                    {{ language }}
+                </span>
+                {% endif %}
+                
+                <span class="meta-item">
+                    <i class="far fa-star"></i>
+                    {{ stars }}
+                </span>
+
+                {% if created_at %}
+                <span class="meta-item">
+                    Created {{ created_at }}
+                </span>
+                {% endif %}
+
+                {% if updated_at %}
+                <span class="meta-item">
+                    Updated {{ updated_at }}
+                </span>
+                {% endif %}
+            </div>
+
             <div class="url-container" id="copy_url" onclick="copyDivToClipboard()">
                 <span class="url-text">{{ repo_url }}</span>
                 <i class="far fa-copy" style="color: var(--color-fg-muted); font-size: 14px;"></i>
